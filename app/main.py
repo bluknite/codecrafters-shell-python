@@ -8,6 +8,8 @@ def main():
 def repl():
     sys.stdout.write('$ ')
     command = input()
+    if command == 'exit':
+        return False
     sys.stdout.write(f'{command}: command not found\n')
     return True
 
