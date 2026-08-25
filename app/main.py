@@ -1,3 +1,4 @@
+import os
 import sys
 
 
@@ -29,9 +30,16 @@ def echo(args: list[[str]]) -> bool:
 def type(args: list[str]) -> bool:
     if args[0] in built_ins.keys():
         print(f'{args[0]} is a shell builtin')
+        return True
     else:
+        paths = os.environ.get('PATH', '').split(os.pathsep)
+        for p in paths:
+            file_path = f'{p}/{args[0]}'
+            if os.path.isfile(file_path) and os.access(file_path, os.X_OK):
+                print(f'{args[0]} is {file_path}')
+                return True
         print(f'{args[0]}: not found')
-    return True
+        return True
 
 built_ins = {
     'echo': echo,
