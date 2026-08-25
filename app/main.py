@@ -1,5 +1,7 @@
-import subprocess
+from pathlib import Path
+
 import os
+import subprocess
 import sys
 
 
@@ -23,13 +25,18 @@ def execute_command(command: str) -> bool:
     print(f'{command}: command not found')
     return True
 
-def exit(args: list[str]) -> bool:
-    return False
-
 def echo(args: list[[str]]) -> bool:
     for arg in args:
         sys.stdout.write(f'{arg} ')
     sys.stdout.write('\n')
+    return True
+
+def exit(args: list[str]) -> bool:
+    return False
+
+def pwd(args: list[str]) -> bool:
+    current_dir = Path.cwd()
+    print(current_dir)
     return True
 
 def type(args: list[str]) -> bool:
@@ -56,6 +63,7 @@ def find_command_path(command: str) -> str | None:
 built_ins = {
     'echo': echo,
     'exit': exit,
+    'pwd': pwd,
     'type': type
 }
 
