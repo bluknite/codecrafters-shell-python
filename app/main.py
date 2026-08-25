@@ -1,3 +1,4 @@
+import subprocess
 import os
 import sys
 
@@ -15,6 +16,10 @@ def execute_command(command: str) -> bool:
     args = command.split(' ')
     if args[0] in built_ins.keys():
         return built_ins[args[0]](args[1:])
+    path = find_command_path(args[0])
+    if path:
+        subprocess.run(args, cwd=path)
+        return True
     print(f'{command}: command not found')
     return True
 
@@ -32,14 +37,21 @@ def type(args: list[str]) -> bool:
         print(f'{args[0]} is a shell builtin')
         return True
     else:
-        paths = os.environ.get('PATH', '').split(os.pathsep)
-        for p in paths:
-            file_path = f'{p}/{args[0]}'
-            if os.path.isfile(file_path) and os.access(file_path, os.X_OK):
-                print(f'{args[0]} is {file_path}')
-                return True
+        path = find_command_path(args[0])
+        if path:
+            print(f'{args[0]} is {path}/{args[0]}')
+            return True
         print(f'{args[0]}: not found')
         return True
+
+# find the path for the given command
+def find_command_path(command: str) -> str | None:
+    paths = os.environ.get('PATH', '').split(os.pathsep)
+    for p in paths:
+        file_path = f'{p}/{command}'
+        if os.path.isfile(file_path) and os.access(file_path, os.X_OK):
+            return p
+    return None
 
 built_ins = {
     'echo': echo,
