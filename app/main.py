@@ -25,6 +25,13 @@ def execute_command(command: str) -> bool:
     print(f'{command}: command not found')
     return True
 
+def cd(args: list[str]) -> bool:
+    if os.path.isdir(args[0]):
+        os.chdir(args[0])
+    else:
+        print(f'cd: {args[0]}: No such file or directory')
+    return True
+
 def echo(args: list[[str]]) -> bool:
     for arg in args:
         sys.stdout.write(f'{arg} ')
@@ -61,6 +68,7 @@ def find_command_path(command: str) -> str | None:
     return None
 
 built_ins = {
+    'cd': cd,
     'echo': echo,
     'exit': exit,
     'pwd': pwd,
