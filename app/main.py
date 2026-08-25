@@ -26,7 +26,9 @@ def execute_command(command: str) -> bool:
     return True
 
 def cd(args: list[str]) -> bool:
-    if os.path.isdir(args[0]):
+    if args[0] == '~':
+        os.chdir(os.environ.get('HOME'))
+    elif os.path.isdir(args[0]):
         os.chdir(args[0])
     else:
         print(f'cd: {args[0]}: No such file or directory')
