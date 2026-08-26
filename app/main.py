@@ -15,7 +15,12 @@ def repl():
     return execute_command(command)
 
 def execute_command(input: str) -> bool:
+    if input == "":
+        return True
     args = tokenize(input)
+    if not args:
+        print(f'Failed to parse input! {input}')
+        return True
     command = args[0]
     if command in built_ins.keys():
         return built_ins[command](args[1:])
@@ -82,22 +87,70 @@ def tokenize(string: str) -> list[str]:
     command = parts[0]
     result = [command]
     if len(parts) > 1:
-        args = parts[1]
-        args = args.replace("''", "")
-        open_quote = args.find("'")
-        while open_quote != -1:
-            pre_quote = args[:open_quote]
-            post_quote = args[open_quote+1:]
-            pre_quote = pre_quote.strip()
-            if len(pre_quote) > 0:
-                result += pre_quote.split()
-            close_quote = post_quote.find("'")
-            result += [post_quote[:close_quote]]
-            args = post_quote[close_quote+1:]
-            open_quote = args.find("'")
-        if len(args) > 0:
-            result += args.strip().split()
+        parsed_args = parse_args(parts[1])
+        if not parsed_args:
+            print(f'Error parsing arguments: {parts[1]}')
+            return None
+        result += parsed_args
     return result
+
+def parse_args(string: str) -> list[str]:
+    i = 0
+    tokens = []
+
+    def handle_quoted_string(quote_type: str, i: int) -> int:
+        j = string.find(quote_type, i+1)
+        if j == -1:
+            print(f'Expected closing quote: {string[i:]}')
+            return None
+        token = string[i+1:j]
+        tokens.append((token, j < len(string) - 1 and string[j+1] != ' '))
+        return j+1
+
+    while i < len(string):
+        # if space advance to next non-space character
+        while string[i] == ' ':
+            i += 1
+        # if single-quote, find next single-quote
+        if string[i] == "'":
+            i = handle_quoted_string("'", i)
+            if not i:
+                return None
+        # if double-quote, find next double-quote
+        elif string[i] == '"':
+            i = handle_quoted_string('"', i)
+            if not i:
+                return None
+        # if non-quote, find next space or quote
+        else:
+            j = i+1
+            while j < len(string) and string[j] != ' ' and not is_quote(string[j]):
+                j += 1
+            token = string[i:j]
+            tokens.append((token, j < len(string) and is_quote(string[j])))
+            i = j
+
+    merged = True
+    while merged:
+        merged = False
+        new_tokens = []
+        i = 0
+        while i < len(tokens):
+            t = tokens[i]
+            if not t[1]:
+                new_tokens.append(t)
+                i += 1
+            else:
+                t2 = tokens[i+1]
+                new_tokens.append((t[0] + t2[0], t2[1]))
+                merged = True
+                i += 2
+        tokens = new_tokens
+
+    return [t[0] for t in tokens]
+
+def is_quote(c: str) -> bool:
+    return c == "'" or c == '"'
 
 built_ins = {
     'cd': cd,
@@ -109,5 +162,3 @@ built_ins = {
 
 if __name__ == "__main__":
     main()
-
-# echo this is 'a test' string here''there 'and everywhere'
