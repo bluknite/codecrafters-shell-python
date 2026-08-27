@@ -83,18 +83,6 @@ def find_command_path(command: str) -> str | None:
     return None
 
 def tokenize(string: str) -> list[str]:
-    parts = string.strip().split(maxsplit=1)
-    command = parts[0]
-    result = [command]
-    if len(parts) > 1:
-        parsed_args = parse_args(parts[1])
-        if not parsed_args:
-            print(f'Error parsing arguments: {parts[1]}')
-            return None
-        result += parsed_args
-    return result
-
-def parse_args(string: str) -> list[str]:
     i = 0
     tokens = []
 
