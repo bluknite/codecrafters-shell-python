@@ -99,11 +99,23 @@ def parse_args(string: str) -> list[str]:
     tokens = []
 
     def handle_quoted_string(quote_type: str, i: int) -> int:
-        j = string.find(quote_type, i+1)
-        if j == -1:
+        j = i + 1
+        token = ''
+        while j < len(string) and string[j] != quote_type:
+            if string[j] == '\\':
+                j += 1
+            token += string[j]
+            j += 1
+        
+        if j >= len(string):
             print(f'Expected closing quote: {string[i:]}')
             return None
-        token = string[i+1:j]
+
+        # j = string.find(quote_type, i+1)
+        # if j == -1:
+        #     print(f'Expected closing quote: {string[i:]}')
+        #     return None
+        # token = string[i+1:j]
         tokens.append((token, j < len(string) - 1 and string[j+1] != ' '))
         return j+1
 
@@ -123,10 +135,15 @@ def parse_args(string: str) -> list[str]:
                 return None
         # if non-quote, find next space or quote
         else:
+            if string[i] == '\\':
+                i += 1
             j = i+1
+            token = string[i]
             while j < len(string) and string[j] != ' ' and not is_quote(string[j]):
+                if string[j] == '\\':
+                    j += 1
+                token += string[j]
                 j += 1
-            token = string[i:j]
             tokens.append((token, j < len(string) and is_quote(string[j])))
             i = j
 
@@ -162,3 +179,18 @@ built_ins = {
 
 if __name__ == "__main__":
     main()
+
+#echo three\ \ \ spaces
+#three   spaces
+
+#echo before\     after
+#before  after
+
+#echo test\nexample
+#testnexample
+
+#echo hello\\world
+#hello\world
+
+#echo \'hello\'
+#'hello'
