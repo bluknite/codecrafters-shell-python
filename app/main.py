@@ -98,48 +98,23 @@ def parse_args(string: str) -> list[str]:
     i = 0
     tokens = []
 
-    def handle_quoted_string(quote_type: str, i: int) -> int:
-        j = i + 1
-        token = ''
-        while j < len(string) and string[j] != quote_type:
-            if string[j] == '\\':
-                j += 1
-            token += string[j]
-            j += 1
-        
-        if j >= len(string):
-            print(f'Expected closing quote: {string[i:]}')
-            return None
-        tokens.append((token, j < len(string) - 1 and string[j+1] != ' '))
-        return j+1
-
     while i < len(string):
         # if space advance to next non-space character
         while string[i] == ' ':
             i += 1
-        # if single-quote, find next single-quote
         if string[i] == "'":
-            i = handle_quoted_string("'", i)
+            (i, token) = parse_single_quoted_string(string, i)
             if not i:
                 return None
-        # if double-quote, find next double-quote
+            tokens.append(token)
         elif string[i] == '"':
-            i = handle_quoted_string('"', i)
+            (i, token) = parse_double_quoted_string(string, i)
             if not i:
                 return None
-        # if non-quote, find next space or quote
+            tokens.append(token)
         else:
-            if string[i] == '\\':
-                i += 1
-            j = i+1
-            token = string[i]
-            while j < len(string) and string[j] != ' ' and not is_quote(string[j]):
-                if string[j] == '\\':
-                    j += 1
-                token += string[j]
-                j += 1
-            tokens.append((token, j < len(string) and is_quote(string[j])))
-            i = j
+            (i, token) = parse_unquoted_string(string, i)
+            tokens.append(token)
 
     merged = True
     while merged:
@@ -159,6 +134,44 @@ def parse_args(string: str) -> list[str]:
         tokens = new_tokens
 
     return [t[0] for t in tokens]
+
+def parse_unquoted_string(string: str, i:int) -> tuple[int, tuple[str, bool]]:
+    if string[i] == '\\':
+        i += 1
+    j = i+1
+    token = string[i]
+    while j < len(string) and string[j] != ' ' and not is_quote(string[j]):
+        if string[j] == '\\':
+            j += 1
+        token += string[j]
+        j += 1
+    return (j, (token, j < len(string) and is_quote(string[j])))
+
+def parse_single_quoted_string(string: str, i: int) -> tuple[int, tuple[str, bool]]:
+    j = i + 1
+    token = ''
+    while j < len(string) and string[j] != "'":
+        token += string[j]
+        j += 1
+    
+    if j >= len(string):
+        print(f'Expected closing quote: {string[i:]}')
+        return (None, None)
+    return (j+1, (token, j < len(string) - 1 and string[j+1] != ' '))
+
+def parse_double_quoted_string(string: str, i: int) -> tuple[int, tuple[str, bool]]:
+    j = i + 1
+    token = ''
+    while j < len(string) and string[j] != '"':
+        if string[j] == '\\':
+            j += 1
+        token += string[j]
+        j += 1
+    
+    if j >= len(string):
+        print(f'Expected closing quote: {string[i:]}')
+        return (None, None)
+    return (j+1, (token, j < len(string) - 1 and string[j+1] != ' '))
 
 def is_quote(c: str) -> bool:
     return c == "'" or c == '"'
