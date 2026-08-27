@@ -110,12 +110,6 @@ def parse_args(string: str) -> list[str]:
         if j >= len(string):
             print(f'Expected closing quote: {string[i:]}')
             return None
-
-        # j = string.find(quote_type, i+1)
-        # if j == -1:
-        #     print(f'Expected closing quote: {string[i:]}')
-        #     return None
-        # token = string[i+1:j]
         tokens.append((token, j < len(string) - 1 and string[j+1] != ' '))
         return j+1
 
@@ -179,18 +173,3 @@ built_ins = {
 
 if __name__ == "__main__":
     main()
-
-#echo three\ \ \ spaces
-#three   spaces
-
-#echo before\     after
-#before  after
-
-#echo test\nexample
-#testnexample
-
-#echo hello\\world
-#hello\world
-
-#echo \'hello\'
-#'hello'
