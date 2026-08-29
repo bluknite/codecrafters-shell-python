@@ -22,56 +22,26 @@ def execute_command(input: str) -> bool:
         print(f'Failed to parse input! {input}')
         return True
     command = args[0]
+    out_file = None
+    if len(args) >= 3 and (args[-2] == '>' or args[-2] == '1>'):
+        out_file = args[-1]
+        args = args[:-2]
+
     if command in built_ins.keys():
-        return built_ins[command](args[1:])
+        return built_ins[command](args[1:], out_file)
     path = find_command_path(command)
     if path:
-        subprocess.run(args, cwd=path)
+        result = subprocess.run(
+            args,
+            cwd=path,
+            capture_output=True,
+            text=True
+        )
+        write_stdout(result.stdout, out_file)
+        write_stderr(result.stderr, None)
         return True
     print(f'{command}: command not found')
     return True
-
-def cd(args: list[str]) -> bool:
-    if len(args) != 1:
-        print(f'cd: expected 1 argument but found {len(args)}')
-        return False
-    if args[0] == '~':
-        os.chdir(os.environ.get('HOME'))
-    elif os.path.isdir(args[0]):
-        os.chdir(args[0])
-    else:
-        print(f'cd: {args[0]}: No such file or directory')
-    return True
-
-def echo(args: list[str]) -> bool:
-    for t in args:
-        sys.stdout.write(f'{t} ')
-    sys.stdout.write('\n')
-    return True
-
-def exit(args: list[str]) -> bool:
-    return False
-
-def pwd(args: list[str]) -> bool:
-    if len(args) > 0:
-        print(f'pwd: too many arguments')
-        return False
-    current_dir = Path.cwd()
-    print(current_dir)
-    return True
-
-def type(args: list[str]) -> bool:
-    commmand = args[0]
-    if commmand in built_ins.keys():
-        print(f'{commmand} is a shell builtin')
-        return True
-    else:
-        path = find_command_path(commmand)
-        if path:
-            print(f'{commmand} is {path}/{commmand}')
-            return True
-        print(f'{commmand}: not found')
-        return True
 
 # find the path for the given command
 def find_command_path(command: str) -> str | None:
@@ -163,6 +133,80 @@ def parse_double_quoted_string(string: str, i: int) -> tuple[int, tuple[str, boo
 
 def is_quote(c: str) -> bool:
     return c == "'" or c == '"'
+
+### Built-in commands ###
+def cd(args: list[str], out_file: str) -> bool:
+    output = ""
+    err = False
+    if len(args) != 1:
+        output = f'cd: expected 1 argument but found {len(args)}\n'
+        err = True
+    if args[0] == '~':
+        os.chdir(os.environ.get('HOME'))
+    elif os.path.isdir(args[0]):
+        os.chdir(args[0])
+    else:
+        output = f'cd: {args[0]}: No such file or directory\n'
+    if not err:
+        write_stdout(output, out_file)
+    else:
+        write_stderr(output, None)
+    return not err
+
+def echo(args: list[str], out_file: str) -> bool:
+    output = ""
+    for t in args:
+        output += f'{t} '
+    output += '\n'
+    write_stdout(output, out_file)
+    return True
+
+def exit(args: list[str], out_file: str) -> bool:
+    return False
+
+def pwd(args: list[str], out_file: str) -> bool:
+    output = ""
+    err = False
+    if len(args) > 0:
+        output = f'pwd: too many arguments\n'
+        err = True
+    else:
+        output = f'{Path.cwd()}\n'
+    if not err:
+        write_stdout(output, out_file)
+    else:
+        write_stderr(output, None)
+    return not err
+
+def type(args: list[str], out_file: str) -> bool:
+    commmand = args[0]
+    output = ""
+    if commmand in built_ins.keys():
+        output = f'{commmand} is a shell builtin\n'
+    else:
+        path = find_command_path(commmand)
+        if path:
+            output = f'{commmand} is {path}/{commmand}\n'
+        else:
+            output = f'{commmand}: not found\n'
+    write_stdout(output, out_file)
+    return True
+
+def write_stdout(content: str, file: str):
+    if file:
+        write_to_file(content, file)
+    else:
+        sys.stdout.write(content)
+
+def write_stderr(content: str, file: str):
+    if file:
+        write_to_file(content, file)
+    else:
+        sys.stderr.write(content)
+
+def write_to_file(content: str, file: str):
+    with open(file, 'w') as file:
+        file.write(content)
 
 built_ins = {
     'cd': cd,
