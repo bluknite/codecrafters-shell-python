@@ -39,15 +39,25 @@ def execute_command(input: str) -> bool:
     command = args[0]
     out_file = None
     err_file = None
+    append = False
     if len(args) >= 3:
         debug(f'  >> Last two args: {args[-2:]}')
         if args[-2] == '>':
             out_file = args[-1]
             err_file = out_file
             args = args[:-2]
+        elif args[-2] == '>>':
+            out_file = args[-1]
+            err_file = out_file
+            args = args[:-2]
+            append = True
         elif args[-2] == '1>':
             out_file = args[-1]
             args = args[:-2]
+        elif args[-2] == '1>>':
+            out_file = args[-1]
+            args = args[:-2]
+            append = True
         elif args[-2] == '2>':
             err_file = args[-1]
             args = args[:-2]
@@ -57,7 +67,7 @@ def execute_command(input: str) -> bool:
     
 
     if command in built_ins.keys():
-        return built_ins[command](args[1:], out_file, err_file)
+        return built_ins[command](args[1:], out_file, err_file, append)
     path = find_command_path(command)
     if path:
         result = subprocess.run(
@@ -66,8 +76,8 @@ def execute_command(input: str) -> bool:
             capture_output=True,
             text=True
         )
-        write_stdout(result.stdout, out_file)
-        write_stderr(result.stderr, err_file)
+        write_stdout(result.stdout, out_file, append=append)
+        write_stderr(result.stderr, err_file, append=append or (out_file == err_file))
         return True
     print(f'{command}: command not found')
     return True
@@ -164,7 +174,7 @@ def is_quote(c: str) -> bool:
     return c == "'" or c == '"'
 
 ### Built-in commands ###
-def cd(args: list[str], out_file: str, err_file: str) -> bool:
+def cd(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
     output = ""
     err = False
     if len(args) != 1:
@@ -177,24 +187,24 @@ def cd(args: list[str], out_file: str, err_file: str) -> bool:
     else:
         output = f'cd: {args[0]}: No such file or directory\n'
     if not err:
-        write_stdout(output, out_file)
+        write_stdout(output, out_file, append=append)
     else:
-        write_stderr(output, err_file)
+        write_stderr(output, err_file, append=append or (out_file == err_file))
     return not err
 
-def echo(args: list[str], out_file: str, err_file: str) -> bool:
+def echo(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
     output = ""
     for t in args:
         output += f'{t} '
     output += '\n'
-    write_stdout(output, out_file)
-    write_stderr('', err_file)
+    write_stdout(output, out_file, append=append)
+    write_stderr('', err_file, append=append or (out_file == err_file))
     return True
 
-def exit(args: list[str], out_file: str, err_file: str) -> bool:
+def exit(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
     return False
 
-def pwd(args: list[str], out_file: str, err_file: str) -> bool:
+def pwd(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
     output = ""
     err = False
     if len(args) > 0:
@@ -203,12 +213,12 @@ def pwd(args: list[str], out_file: str, err_file: str) -> bool:
     else:
         output = f'{Path.cwd()}\n'
     if not err:
-        write_stdout(output, out_file)
+        write_stdout(output, out_file, append=append)
     else:
-        write_stderr(output, err_file)
+        write_stderr(output, err_file, append=append or (out_file == err_file))
     return not err
 
-def type(args: list[str], out_file: str, err_file: str) -> bool:
+def type(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
     commmand = args[0]
     output = ""
     if commmand in built_ins.keys():
@@ -219,24 +229,25 @@ def type(args: list[str], out_file: str, err_file: str) -> bool:
             output = f'{commmand} is {path}/{commmand}\n'
         else:
             output = f'{commmand}: not found\n'
-    write_stdout(output, out_file)
+    write_stdout(output, out_file, append=append)
     return True
 
-def write_stdout(content: str, file: str):
+def write_stdout(content: str, file: str, append = False):
     if file:
-        write_to_file(content, file)
+        write_to_file(content, file, append=append)
     else:
         sys.stdout.write(content)
 
-def write_stderr(content: str, file: str):
+def write_stderr(content: str, file: str, append = False):
     if file:
-        write_to_file(content, file)
+        write_to_file(content, file, append=append)
     else:
         sys.stderr.write(content)
 
-def write_to_file(content: str, file_path: str):
+def write_to_file(content: str, file_path: str, append=False):
     debug(f'Attempting to write "{content}" to {file_path}')
-    with open(file_path, 'a') as file:
+    mode = 'a' if append else 'w'
+    with open(file_path, mode) as file:
         file.write(content)
     debug(f'{file_path} exists: {os.path.exists(file_path)}')
 
