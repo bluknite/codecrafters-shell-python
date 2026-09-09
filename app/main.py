@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import os
+import readline
 import subprocess
 import sys
 
@@ -13,13 +14,17 @@ def set_debug_file(file_path):
 
 def debug(msg: str):
     if debug_file:
-        with open(debug_file, 'a') as file:
+        debug_file_normalized = str.replace(debug_file, '~', os.environ.get('HOME'))
+        with open(debug_file_normalized, 'a') as file:
             file.write(msg)
             file.write('\n')
 
 def main():
+    # set_debug_file('~/tmp/debug.out')
     debug('\nNew Run')
     debug('=======')
+    readline.set_completer(invoke_completion)
+    readline.parse_and_bind("tab: complete")
     while repl():
         pass
 
@@ -86,8 +91,10 @@ def tokenize(string: str) -> list[str]:
 
     while i < len(string):
         # if space advance to next non-space character
-        while string[i] == ' ':
+        while i < len(string) and string[i] == ' ':
             i += 1
+        if i >= len(string):
+            break
         if string[i] == "'":
             (i, token) = parse_single_quoted_string(string, i)
             if not i:
@@ -239,6 +246,17 @@ def write_to_file(content: str, file_path: str, append=False):
     with open(file_path, mode) as file:
         file.write(content)
     debug(f'{file_path} exists: {os.path.exists(file_path)}')
+
+def invoke_completion(text: str, state: int) -> str:
+    debug(f'Attempting to complete: {text} {state}')
+    COMMANDS = ['echo', 'exit']
+    matches = [cmd for cmd in COMMANDS if cmd.startswith(text)]
+    if state > 0:
+        return None
+    if len(matches) == 1:
+        return f'{matches[0]} '
+    return None
+        
 
 built_ins = {
     'cd': cd,
