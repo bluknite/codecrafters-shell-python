@@ -4,8 +4,22 @@ import os
 import subprocess
 import sys
 
+## Helpers for local debugging
+debug_file = None
+
+def set_debug_file(file_path):
+    global debug_file
+    debug_file = file_path
+
+def debug(msg: str):
+    if debug_file:
+        with open(debug_file, 'a') as file:
+            file.write(msg)
+            file.write('\n')
 
 def main():
+    debug('\nNew Run')
+    debug('=======')
     while repl():
         pass
 
@@ -15,6 +29,7 @@ def repl():
     return execute_command(command)
 
 def execute_command(input: str) -> bool:
+    debug(f'\nReceived input: {input}')
     if input == "":
         return True
     args = tokenize(input)
@@ -23,12 +38,26 @@ def execute_command(input: str) -> bool:
         return True
     command = args[0]
     out_file = None
-    if len(args) >= 3 and (args[-2] == '>' or args[-2] == '1>'):
-        out_file = args[-1]
-        args = args[:-2]
+    err_file = None
+    if len(args) >= 3:
+        debug(f'  >> Last two args: {args[-2:]}')
+        if args[-2] == '>':
+            out_file = args[-1]
+            err_file = out_file
+            args = args[:-2]
+        elif args[-2] == '1>':
+            out_file = args[-1]
+            args = args[:-2]
+        elif args[-2] == '2>':
+            err_file = args[-1]
+            args = args[:-2]
+        debug(f'  >> Args: {args}')
+        debug(f'  >> Out file: {out_file}')
+        debug(f'  >> Err file: {err_file}')
+    
 
     if command in built_ins.keys():
-        return built_ins[command](args[1:], out_file)
+        return built_ins[command](args[1:], out_file, err_file)
     path = find_command_path(command)
     if path:
         result = subprocess.run(
@@ -38,7 +67,7 @@ def execute_command(input: str) -> bool:
             text=True
         )
         write_stdout(result.stdout, out_file)
-        write_stderr(result.stderr, None)
+        write_stderr(result.stderr, err_file)
         return True
     print(f'{command}: command not found')
     return True
@@ -135,7 +164,7 @@ def is_quote(c: str) -> bool:
     return c == "'" or c == '"'
 
 ### Built-in commands ###
-def cd(args: list[str], out_file: str) -> bool:
+def cd(args: list[str], out_file: str, err_file: str) -> bool:
     output = ""
     err = False
     if len(args) != 1:
@@ -150,21 +179,22 @@ def cd(args: list[str], out_file: str) -> bool:
     if not err:
         write_stdout(output, out_file)
     else:
-        write_stderr(output, None)
+        write_stderr(output, err_file)
     return not err
 
-def echo(args: list[str], out_file: str) -> bool:
+def echo(args: list[str], out_file: str, err_file: str) -> bool:
     output = ""
     for t in args:
         output += f'{t} '
     output += '\n'
     write_stdout(output, out_file)
+    write_stderr('', err_file)
     return True
 
-def exit(args: list[str], out_file: str) -> bool:
+def exit(args: list[str], out_file: str, err_file: str) -> bool:
     return False
 
-def pwd(args: list[str], out_file: str) -> bool:
+def pwd(args: list[str], out_file: str, err_file: str) -> bool:
     output = ""
     err = False
     if len(args) > 0:
@@ -175,10 +205,10 @@ def pwd(args: list[str], out_file: str) -> bool:
     if not err:
         write_stdout(output, out_file)
     else:
-        write_stderr(output, None)
+        write_stderr(output, err_file)
     return not err
 
-def type(args: list[str], out_file: str) -> bool:
+def type(args: list[str], out_file: str, err_file: str) -> bool:
     commmand = args[0]
     output = ""
     if commmand in built_ins.keys():
@@ -204,9 +234,11 @@ def write_stderr(content: str, file: str):
     else:
         sys.stderr.write(content)
 
-def write_to_file(content: str, file: str):
-    with open(file, 'w') as file:
+def write_to_file(content: str, file_path: str):
+    debug(f'Attempting to write "{content}" to {file_path}')
+    with open(file_path, 'a') as file:
         file.write(content)
+    debug(f'{file_path} exists: {os.path.exists(file_path)}')
 
 built_ins = {
     'cd': cd,
