@@ -249,10 +249,10 @@ def write_to_file(content: str, file_path: str, append=False):
 
 def invoke_completion(text: str, state: int) -> str:
     debug(f'Attempting to complete: {text} {state}')
-    COMMANDS = ['echo', 'exit']
-    matches = [cmd for cmd in COMMANDS if cmd.startswith(text)]
     if state > 0:
         return None
+    COMMANDS = ['echo', 'exit']
+    matches = [cmd for cmd in COMMANDS if cmd.startswith(text)]
     if len(matches) == 1:
         return f'{matches[0]} '
     return None
