@@ -42,24 +42,13 @@ def execute_command(input: str) -> bool:
     append = False
     if len(args) >= 3:
         debug(f'  >> Last two args: {args[-2:]}')
-        if args[-2] == '>':
+        if args[-2] == '>' or args[-2] == '1>' or args[-2] == '>>' or args[-2] == '1>>':
             out_file = args[-1]
-            err_file = out_file
+            append = args[-2] == '>>' or args[-2] == '1>>'
             args = args[:-2]
-        elif args[-2] == '>>':
-            out_file = args[-1]
-            err_file = out_file
-            args = args[:-2]
-            append = True
-        elif args[-2] == '1>':
-            out_file = args[-1]
-            args = args[:-2]
-        elif args[-2] == '1>>':
-            out_file = args[-1]
-            args = args[:-2]
-            append = True
-        elif args[-2] == '2>':
+        elif args[-2] == '2>' or args[-2] == '2>>':
             err_file = args[-1]
+            append = args[-2] == '2>>'
             args = args[:-2]
         debug(f'  >> Args: {args}')
         debug(f'  >> Out file: {out_file}')
@@ -77,7 +66,7 @@ def execute_command(input: str) -> bool:
             text=True
         )
         write_stdout(result.stdout, out_file, append=append)
-        write_stderr(result.stderr, err_file, append=append or (out_file == err_file))
+        write_stderr(result.stderr, err_file, append=append)
         return True
     print(f'{command}: command not found')
     return True
@@ -189,7 +178,7 @@ def cd(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
     if not err:
         write_stdout(output, out_file, append=append)
     else:
-        write_stderr(output, err_file, append=append or (out_file == err_file))
+        write_stderr(output, err_file, append=append)
     return not err
 
 def echo(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
@@ -198,7 +187,7 @@ def echo(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
         output += f'{t} '
     output += '\n'
     write_stdout(output, out_file, append=append)
-    write_stderr('', err_file, append=append or (out_file == err_file))
+    write_stderr('', err_file, append=append)
     return True
 
 def exit(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
@@ -215,7 +204,7 @@ def pwd(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
     if not err:
         write_stdout(output, out_file, append=append)
     else:
-        write_stderr(output, err_file, append=append or (out_file == err_file))
+        write_stderr(output, err_file, append=append)
     return not err
 
 def type(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
