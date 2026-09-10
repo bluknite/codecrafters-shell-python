@@ -20,11 +20,16 @@ def debug(msg: str):
             file.write('\n')
 
 def main():
-    # set_debug_file('~/tmp/debug.out')
+    global debug_mode
+    if debug_mode:
+        set_debug_file('~/tmp/debug.out')
     debug('\nNew Run')
     debug('=======')
     readline.set_completer(invoke_completion)
+    readline.set_completion_display_matches_hook(display_matches_hook)
     readline.parse_and_bind("tab: complete")
+    readline.parse_and_bind("set bell-style audible")
+    readline.parse_and_bind("set show-all-if-ambiguous off")
     while repl():
         pass
 
@@ -251,22 +256,40 @@ def invoke_completion(text: str, state: int) -> str:
         return None
     COMMANDS = ['echo', 'exit']
     matches = find_matching_entries(COMMANDS)
+    debug(f' Builtin match : {matches} {state}')
     try:
+        debug('  RETURNING FROM BUILTIN')
         return f'{matches[state]} '
     except IndexError:
-        pass
+        if len(matches) > 0:
+            return None
+        debug('  NO BUILTIN MATCHES')
 
+    debug('Looking for executable matches')
+    all_matches = []
     for p in os.environ.get('PATH', '').split(os.pathsep):
+        debug(f'  Checking path {p}')
         if os.path.isdir(p):
             with os.scandir(p) as entries:
                 files = [entry.name for entry in entries if entry.is_file()]
-                matches = find_matching_entries(files)
-                try:
-                    return f'{matches[state]} '
-                except IndexError:
-                    pass
+                all_matches.extend(find_matching_entries(files))
+                debug(f'    Total matches: {all_matches}')
+    debug(f' Executable match : {all_matches} {state}')
+    try:
+        debug('  RETURNING FROM EXECUTABLE')
+        return f'{all_matches[state]} '
+    except IndexError:
+        debug('  INDEX ERROR')
+        pass
 
     return None
+
+def display_matches_hook(substitution: str, matches: list, max_length: int):
+    sys.stdout.write("\n")
+    sys.stdout.write("  ".join(matches))
+    sys.stdout.write(f'\n$ {substitution}')
+    sys.stdout.flush()
+    readline.redisplay()
         
 
 built_ins = {
@@ -276,6 +299,8 @@ built_ins = {
     'pwd': pwd,
     'type': type
 }
+
+debug_mode = True
 
 if __name__ == "__main__":
     main()
