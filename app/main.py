@@ -300,7 +300,7 @@ built_ins = {
     'type': type
 }
 
-debug_mode = True
+debug_mode = False
 
 if __name__ == "__main__":
     main()
