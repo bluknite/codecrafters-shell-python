@@ -251,35 +251,25 @@ def invoke_completion(text: str, state: int) -> str:
     def find_matching_entries(commands: list[str]) -> list[str]:
         return [cmd for cmd in commands if cmd.startswith(text)]
 
-    debug(f'Attempting to complete: {text} {state}')
     if len(text) == 0:
         return None
     COMMANDS = ['echo', 'exit']
     matches = find_matching_entries(COMMANDS)
-    debug(f' Builtin match : {matches} {state}')
     try:
-        debug('  RETURNING FROM BUILTIN')
         return f'{matches[state]} '
     except IndexError:
         if len(matches) > 0:
             return None
-        debug('  NO BUILTIN MATCHES')
 
-    debug('Looking for executable matches')
     all_matches = []
     for p in os.environ.get('PATH', '').split(os.pathsep):
-        debug(f'  Checking path {p}')
         if os.path.isdir(p):
             with os.scandir(p) as entries:
                 files = [entry.name for entry in entries if entry.is_file()]
                 all_matches.extend(find_matching_entries(files))
-                debug(f'    Total matches: {all_matches}')
-    debug(f' Executable match : {all_matches} {state}')
     try:
-        debug('  RETURNING FROM EXECUTABLE')
         return f'{all_matches[state]} '
     except IndexError:
-        debug('  INDEX ERROR')
         pass
 
     return None
