@@ -247,32 +247,56 @@ def write_to_file(content: str, file_path: str, append=False):
         file.write(content)
 
 def invoke_completion(text: str, state: int) -> str:
+    buffer = readline.get_line_buffer()
+    begidx = readline.get_begidx()
+    prefix = buffer[:begidx]
+    is_first_word = prefix.strip() == ""
 
     def find_matching_entries(commands: list[str]) -> list[str]:
         return [cmd for cmd in commands if cmd.startswith(text)]
+    
+    def find_matching_command():
+        COMMANDS = ['echo', 'exit']
+        matches = find_matching_entries(COMMANDS)
+        try:
+            return f'{matches[state]} '
+        except IndexError:
+            if len(matches) > 0:
+                return None
+
+        all_matches = []
+        for p in os.environ.get('PATH', '').split(os.pathsep):
+            if os.path.isdir(p):
+                with os.scandir(p) as entries:
+                    files = [entry.name for entry in entries if entry.is_file()]
+                    all_matches.extend(find_matching_entries(files))
+        try:
+            return f'{all_matches[state]} '
+        except IndexError:
+            pass
+        
+        return None
+    
+    def find_matching_files():
+        cwd = Path.cwd()
+        with os.scandir(cwd) as entries:
+            files = [entry.name for entry in entries if entry.is_file()]
+            matches = find_matching_entries(files)
+            try:
+                return f'{matches[state]} '
+            except IndexError:
+                pass
+        return None
+
 
     if len(text) == 0:
         return None
-    COMMANDS = ['echo', 'exit']
-    matches = find_matching_entries(COMMANDS)
-    try:
-        return f'{matches[state]} '
-    except IndexError:
-        if len(matches) > 0:
-            return None
-
-    all_matches = []
-    for p in os.environ.get('PATH', '').split(os.pathsep):
-        if os.path.isdir(p):
-            with os.scandir(p) as entries:
-                files = [entry.name for entry in entries if entry.is_file()]
-                all_matches.extend(find_matching_entries(files))
-    try:
-        return f'{all_matches[state]} '
-    except IndexError:
-        pass
-
-    return None
+    
+    if is_first_word:
+        return find_matching_command()
+    else:
+        return find_matching_files()
+        # return f'{buffer[:begidx]}{find_matching_files()}'
 
 def display_matches_hook(substitution: str, matches: list, max_length: int):
     sys.stdout.write("\n")
