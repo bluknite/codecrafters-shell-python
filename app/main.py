@@ -46,7 +46,6 @@ def execute_command(input: str) -> bool:
     err_file = None
     append = False
     if len(args) >= 3:
-        debug(f'  >> Last two args: {args[-2:]}')
         if args[-2] == '>' or args[-2] == '1>' or args[-2] == '>>' or args[-2] == '1>>':
             out_file = args[-1]
             append = args[-2] == '>>' or args[-2] == '1>>'
@@ -55,9 +54,6 @@ def execute_command(input: str) -> bool:
             err_file = args[-1]
             append = args[-2] == '2>>'
             args = args[:-2]
-        debug(f'  >> Args: {args}')
-        debug(f'  >> Out file: {out_file}')
-        debug(f'  >> Err file: {err_file}')
     
 
     if command in built_ins.keys():
@@ -241,20 +237,35 @@ def write_stderr(content: str, file: str, append = False):
         sys.stderr.write(content)
 
 def write_to_file(content: str, file_path: str, append=False):
-    debug(f'Attempting to write "{content}" to {file_path}')
     mode = 'a' if append else 'w'
     with open(file_path, mode) as file:
         file.write(content)
-    debug(f'{file_path} exists: {os.path.exists(file_path)}')
 
 def invoke_completion(text: str, state: int) -> str:
+
+    def find_matching_entries(commands: list[str]) -> list[str]:
+        return [cmd for cmd in commands if cmd.startswith(text)]
+
     debug(f'Attempting to complete: {text} {state}')
-    if state > 0:
+    if len(text) == 0:
         return None
     COMMANDS = ['echo', 'exit']
-    matches = [cmd for cmd in COMMANDS if cmd.startswith(text)]
-    if len(matches) == 1:
-        return f'{matches[0]} '
+    matches = find_matching_entries(COMMANDS)
+    try:
+        return f'{matches[state]} '
+    except IndexError:
+        pass
+
+    for p in os.environ.get('PATH', '').split(os.pathsep):
+        if os.path.isdir(p):
+            with os.scandir(p) as entries:
+                files = [entry.name for entry in entries if entry.is_file()]
+                matches = find_matching_entries(files)
+                try:
+                    return f'{matches[state]} '
+                except IndexError:
+                    pass
+
     return None
         
 
