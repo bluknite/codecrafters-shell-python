@@ -26,6 +26,7 @@ def main():
     debug('\nNew Run')
     debug('=======')
     readline.set_completer(invoke_completion)
+    readline.set_completer_delims(" \t\n`!@#$%^&*()=+[{]}\\|;:'\",<>?")
     readline.set_completion_display_matches_hook(display_matches_hook)
     readline.parse_and_bind("tab: complete")
     readline.parse_and_bind("set bell-style audible")
@@ -252,12 +253,22 @@ def invoke_completion(text: str, state: int) -> str:
     prefix = buffer[:begidx]
     is_first_word = prefix.strip() == ""
 
-    def find_matching_entries(commands: list[str]) -> list[str]:
-        return [cmd for cmd in commands if cmd.startswith(text)]
+    debug(f'\n~~~ Autocomplete: {text} {state}')
+    debug(f'~~~   Buffer: {buffer}')
+    debug(f'~~~   Begidx: {begidx}')
+    debug(f'~~~   Prefix: {prefix}')
+    debug(f'~~~   Is first word: {is_first_word}')
+
+    def find_matching_entries(entries: list[str], prefix: str) -> list[str]:
+        if len(prefix) == 0:
+            return entries
+        return [e for e in entries if e.startswith(prefix)]
     
     def find_matching_command():
+        debug(f'~~~   Matching {text} as a command')
         COMMANDS = ['echo', 'exit']
-        matches = find_matching_entries(COMMANDS)
+        matches = find_matching_entries(COMMANDS, text)
+        debug(f'~~~   Command matches: {matches}')
         try:
             return f'{matches[state]} '
         except IndexError:
@@ -269,7 +280,7 @@ def invoke_completion(text: str, state: int) -> str:
             if os.path.isdir(p):
                 with os.scandir(p) as entries:
                     files = [entry.name for entry in entries if entry.is_file()]
-                    all_matches.extend(find_matching_entries(files))
+                    all_matches.extend(find_matching_entries(files, text))
         try:
             return f'{all_matches[state]} '
         except IndexError:
@@ -278,10 +289,22 @@ def invoke_completion(text: str, state: int) -> str:
         return None
     
     def find_matching_files():
+        debug(f'~~~   Matching {text} as a file')
         cwd = Path.cwd()
-        with os.scandir(cwd) as entries:
+        slash_idx = text.rfind('/')
+        debug(f'~~~    Slash index: {slash_idx}')
+        if slash_idx == -1:
+            path = ''
+            prefix = text
+        else:
+            path = text[:slash_idx+1]
+            prefix = text[slash_idx+1:]
+        debug(f'~~~   Path: {path}, Prefix: {prefix}')
+        full_path = os.path.join(cwd, path)
+        with os.scandir(full_path) as entries:
             files = [entry.name for entry in entries if entry.is_file()]
-            matches = find_matching_entries(files)
+            matches = [path + f for f in find_matching_entries(files, prefix)]
+            debug(f'~~~   File matches: {matches}')
             try:
                 return f'{matches[state]} '
             except IndexError:
