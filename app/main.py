@@ -257,19 +257,7 @@ def invoke_completion(text: str, state: int) -> str:
         if len(prefix) == 0:
             return entries
         return [e for e in entries if e.startswith(prefix)]
-    
-    def get_full_path_path_and_prefix(path: str) -> tuple[str, str, str]:
-        cwd = Path.cwd()
-        slash_idx = text.rfind('/')
-        if slash_idx == -1:
-            path = ''
-            prefix = text
-        else:
-            path = text[:slash_idx+1]
-            prefix = text[slash_idx+1:]
-        full_path = os.path.join(cwd, path)
-        return (full_path, path, prefix)
-    
+
     def find_matching_command():
         COMMANDS = ['echo', 'exit']
         matches = find_matching_entries(COMMANDS, text)
@@ -293,7 +281,15 @@ def invoke_completion(text: str, state: int) -> str:
         return None
     
     def find_matching_path_entries():
-        (full_path, path, prefix) = get_full_path_path_and_prefix(text)
+        cwd = Path.cwd()
+        slash_idx = text.rfind('/')
+        if slash_idx == -1:
+            path = ''
+            prefix = text
+        else:
+            path = text[:slash_idx+1]
+            prefix = text[slash_idx+1:]
+        full_path = os.path.join(cwd, path)
         with os.scandir(full_path) as entries:
             matches = [(path + entry.name, entry.is_dir()) for entry in entries if entry.name.startswith(prefix)]
             formatted_matches = [f'{m}{"/" if is_dir else " "}' for (m, is_dir) in matches]
@@ -302,29 +298,6 @@ def invoke_completion(text: str, state: int) -> str:
             except IndexError:
                 if len(matches) > 0:
                     return None
-    
-    def find_matching_files():
-        (full_path, path, prefix) = get_full_path_path_and_prefix(text)
-        with os.scandir(full_path) as entries:
-            files = [entry.name for entry in entries if entry.is_file()]
-            matches = [path + f for f in find_matching_entries(files, prefix)]
-            try:
-                return f'{matches[state]} '
-            except IndexError:
-                if len(matches) > 0:
-                    return None
-    
-    def find_matching_dirs():
-        (full_path, path, prefix) = get_full_path_path_and_prefix(text)
-        with os.scandir(full_path) as entries:
-            dirs = [entry.name for entry in entries if entry.is_dir()]
-            matches = [path + f for f in find_matching_entries(dirs, prefix)]
-            try:
-                return f'{matches[state]}/'
-            except IndexError:
-                pass
-
-        return None
     
     if is_first_word:
         return find_matching_command()
