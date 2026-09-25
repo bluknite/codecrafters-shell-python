@@ -23,7 +23,7 @@ def main():
     global debug_mode
     if debug_mode:
         set_debug_file('~/tmp/debug.out')
-    debug('\nNew Run')
+    debug('\n\n\n\nNew Run')
     debug('=======')
     readline.set_completer(invoke_completion)
     readline.set_completer_delims(" \t\n`!@#$%^&*()=+[{]}\\|;:'\",<>?")
@@ -260,6 +260,8 @@ def invoke_completion(text: str, state: int) -> str:
     debug(f'~~~   Is first word: {is_first_word}')
 
     def find_matching_entries(entries: list[str], prefix: str) -> list[str]:
+        debug(f'~~~     Prefix: {prefix}')
+        debug(f'~~~     Entries: {entries}')
         if len(prefix) == 0:
             return entries
         return [e for e in entries if e.startswith(prefix)]
@@ -298,6 +300,24 @@ def invoke_completion(text: str, state: int) -> str:
         
         return None
     
+    def find_matching_path_entries():
+        (full_path, path, prefix) = get_full_path_path_and_prefix(text)
+        debug(f'~~~   Full Path: {full_path}')
+        debug(f'~~~   Path: {path}')
+        debug(f'~~~   Prefix: {prefix}')
+        debug(f'~~~   State: {state}')
+        debug(f'~~~   Text: {text}')
+        with os.scandir(full_path) as entries:
+            debug(f'~~~     Entries: {entries}')
+            matches = [(path + entry.name, entry.is_dir()) for entry in entries if entry.name.startswith(prefix)]
+            formatted_matches = [f'{m}{"/" if is_dir else " "}' for (m, is_dir) in matches]
+            debug(f'~~~     Matches: {formatted_matches}')
+            try:
+                return f'{formatted_matches[state]}'
+            except IndexError:
+                if len(matches) > 0:
+                    return None
+    
     def find_matching_files():
         (full_path, path, prefix) = get_full_path_path_and_prefix(text)
         with os.scandir(full_path) as entries:
@@ -320,24 +340,25 @@ def invoke_completion(text: str, state: int) -> str:
                 pass
 
         return None
-
-
-    if len(text) == 0:
-        return find_matching_dirs()
     
     if is_first_word:
+        debug(f'~~~ Matching Command {text}')
         return find_matching_command()
-    else:
-        result = find_matching_files()
-        if result:
-            return result
-        else:
-            return find_matching_dirs()
+    debug(f'~~~ Matching Path Entries {text}')
+    result = find_matching_path_entries()
+    debug(f'~~~     Result: {result}')
+    if result:
+        return result
+    return None
 
 def display_matches_hook(substitution: str, matches: list, max_length: int):
+    debug(f'>>> display_matches_hook: [{substitution}] [{matches}] [{max_length}]')
+    buffer = readline.get_line_buffer()
+    begidx = readline.get_begidx()
+    prefix = buffer[:begidx]
     sys.stdout.write("\n")
     sys.stdout.write("  ".join(matches))
-    sys.stdout.write(f'\n$ {substitution}')
+    sys.stdout.write(f'\n$ {prefix}{substitution}')
     sys.stdout.flush()
     readline.redisplay()
         
