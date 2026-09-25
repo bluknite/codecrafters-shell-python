@@ -190,6 +190,9 @@ def cd(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
         write_stderr(output, err_file, append=append)
     return not err
 
+def cmomplete(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
+    return True
+
 def echo(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
     output = ""
     for t in args:
