@@ -190,7 +190,7 @@ def cd(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
         write_stderr(output, err_file, append=append)
     return not err
 
-def cmomplete(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
+def complete(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
     return True
 
 def echo(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
@@ -322,6 +322,7 @@ def display_matches_hook(substitution: str, matches: list, max_length: int):
 
 built_ins = {
     'cd': cd,
+    'complete': complete,
     'echo': echo,
     'exit': exit,
     'pwd': pwd,
