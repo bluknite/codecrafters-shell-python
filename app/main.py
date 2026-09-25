@@ -253,15 +253,7 @@ def invoke_completion(text: str, state: int) -> str:
     prefix = buffer[:begidx]
     is_first_word = prefix.strip() == ""
 
-    debug(f'\n~~~ Autocomplete: {text} {state}')
-    debug(f'~~~   Buffer: {buffer}')
-    debug(f'~~~   Begidx: {begidx}')
-    debug(f'~~~   Prefix: {prefix}')
-    debug(f'~~~   Is first word: {is_first_word}')
-
     def find_matching_entries(entries: list[str], prefix: str) -> list[str]:
-        debug(f'~~~     Prefix: {prefix}')
-        debug(f'~~~     Entries: {entries}')
         if len(prefix) == 0:
             return entries
         return [e for e in entries if e.startswith(prefix)]
@@ -302,16 +294,9 @@ def invoke_completion(text: str, state: int) -> str:
     
     def find_matching_path_entries():
         (full_path, path, prefix) = get_full_path_path_and_prefix(text)
-        debug(f'~~~   Full Path: {full_path}')
-        debug(f'~~~   Path: {path}')
-        debug(f'~~~   Prefix: {prefix}')
-        debug(f'~~~   State: {state}')
-        debug(f'~~~   Text: {text}')
         with os.scandir(full_path) as entries:
-            debug(f'~~~     Entries: {entries}')
             matches = [(path + entry.name, entry.is_dir()) for entry in entries if entry.name.startswith(prefix)]
             formatted_matches = [f'{m}{"/" if is_dir else " "}' for (m, is_dir) in matches]
-            debug(f'~~~     Matches: {formatted_matches}')
             try:
                 return f'{formatted_matches[state]}'
             except IndexError:
@@ -342,17 +327,13 @@ def invoke_completion(text: str, state: int) -> str:
         return None
     
     if is_first_word:
-        debug(f'~~~ Matching Command {text}')
         return find_matching_command()
-    debug(f'~~~ Matching Path Entries {text}')
     result = find_matching_path_entries()
-    debug(f'~~~     Result: {result}')
     if result:
         return result
     return None
 
 def display_matches_hook(substitution: str, matches: list, max_length: int):
-    debug(f'>>> display_matches_hook: [{substitution}] [{matches}] [{max_length}]')
     buffer = readline.get_line_buffer()
     begidx = readline.get_begidx()
     prefix = buffer[:begidx]
@@ -371,7 +352,7 @@ built_ins = {
     'type': type
 }
 
-debug_mode = False
+debug_mode = True
 
 if __name__ == "__main__":
     main()
