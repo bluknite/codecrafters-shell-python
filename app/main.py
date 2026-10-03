@@ -191,6 +191,12 @@ def cd(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
     return not err
 
 def complete(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
+    if len(args) == 2:
+        if args[0] != '-p':
+            write_stderr(f'complete: argument {args[0]} must be -p\n', err_file, append=append)
+            return False
+        write_stdout(f'complete: {args[1]}: no completion specification\n', out_file, append=append)
+        return True
     return True
 
 def echo(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
