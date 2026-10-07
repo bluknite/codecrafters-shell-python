@@ -63,9 +63,11 @@ def execute_command(input: str) -> bool:
     
 
     if command in built_ins.keys():
+        debug(f'~~   Executing built-in command: {command} using args: {args[1:]}')
         return built_ins[command](args[1:], out_file, err_file, append)
     path = find_command_path(command)
     if path:
+        debug(f'~~   Executing external command: {command} using args: {args}')
         result = subprocess.run(
             args,
             cwd=path,
@@ -190,13 +192,28 @@ def cd(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
         write_stderr(output, err_file, append=append)
     return not err
 
+completions: dict[str, str] = {}
+
 def complete(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
-    if len(args) == 2:
-        if args[0] != '-p':
+    if len(args) >= 2:
+        flag = args[0]
+        debug(f'~~ Complete Flag: {flag}')
+        if flag == '-C':
+            debug(f'~~   Registering using args: {args[1:]}')
+            completions[args[2]] = args[1]
+            debug(f'~~      Completions: {completions}')
+            return True
+        elif flag == '-p':
+            debug(f'~~   Looking up using args: {args[1:]}')
+            path = completions.get(args[1])
+            if path:
+                write_stdout(f"complete -C '{path}' {args[1]}\n", out_file, append=append)
+            else:
+                write_stdout(f'complete: {args[1]}: no completion specification\n', out_file, append=append)
+            return True
+        else:
             write_stderr(f'complete: argument {args[0]} must be -p\n', err_file, append=append)
             return False
-        write_stdout(f'complete: {args[1]}: no completion specification\n', out_file, append=append)
-        return True
     return True
 
 def echo(args: list[str], out_file: str, err_file: str, append: bool) -> bool:
@@ -268,7 +285,7 @@ def invoke_completion(text: str, state: int) -> str:
         return [e for e in entries if e.startswith(prefix)]
 
     def find_matching_command():
-        COMMANDS = ['echo', 'exit']
+        COMMANDS = built_ins.keys()
         matches = find_matching_entries(COMMANDS, text)
         try:
             return f'{matches[state]} '
