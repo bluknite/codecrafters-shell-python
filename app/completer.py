@@ -62,7 +62,7 @@ class Completer():
                 Debugger.debug(f'~~~   Extending args with: {tokens[-1]}')
                 args.append(tokens[-1])
             Debugger.debug(f'~~~   Final args: {args}')
-            return self.__find_matching_completions(completer_path, args, state)
+            return self.__find_matching_completions(completer_path, args, state, buffer)
 
         return self.__find_matching_path_entries(text, state)
 
@@ -129,8 +129,8 @@ class Completer():
                 if len(matches) > 0:
                     return None
     
-    def __find_matching_completions(self, completer_path: str, args: list[str], state: int):
-        matches = self.__invoke_completer(completer_path, args)
+    def __find_matching_completions(self, completer_path: str, args: list[str], state: int, buffer: str):
+        matches = self.__invoke_completer(completer_path, args, buffer)
         # matches = self.__find_matching_entries(options, text)
         Debugger.debug(f'~~~ Matches found in completer for {args}: {matches}')
         try:
@@ -139,15 +139,19 @@ class Completer():
             if len(matches) > 0:
                 return None
     
-    def __invoke_completer(self, path: str, args: list[str]) -> list[str] | None:
+    def __invoke_completer(self, path: str, args: list[str], buffer: str) -> list[str] | None:
         exec_path = Path(path)
         exec_args = [str(exec_path)]
         exec_args.extend(args)
         Debugger.debug(f'~~~ Invoking completer: {exec_args}')
+        exec_env = os.environ.copy()
+        exec_env['COMP_LINE'] = buffer
+        exec_env['COMP_POINT'] = str(len(buffer))
         try:
             result = subprocess.run(
                 exec_args,
                 cwd=exec_path.parent,
+                env=exec_env,
                 capture_output=True,
                 text=True,
                 check=True,
