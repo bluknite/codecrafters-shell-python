@@ -30,14 +30,14 @@ class Completer():
         return self.completions.get(command, None)
     
     def register_hooks(self):
-        readline.set_completer(self.__invoke_completion)
+        readline.set_completer(self.__invoke_completion_hook)
         readline.set_completer_delims(" \t\n`!@#$%^&*()=+[{]}\\|;:'\",<>?")
         readline.set_completion_display_matches_hook(self.__display_matches_hook)
         readline.parse_and_bind("tab: complete")
         readline.parse_and_bind("set bell-style audible")
         readline.parse_and_bind("set show-all-if-ambiguous off")
     
-    def __invoke_completion(self, text: str, state: int) -> str:
+    def __invoke_completion_hook(self, text: str, state: int) -> str:
         buffer = readline.get_line_buffer()
         begidx = readline.get_begidx()
         prefix = buffer[:begidx]
@@ -53,10 +53,9 @@ class Completer():
             return self.__find_matching_command(text, state)
 
         tokens = ShellTokenizer.tokenize(prefix)
-        command = tokens[0]
         if len(text.strip()) == 0:
             # completion after a space
-            completer_path = self.get_completer_path(command)
+            completer_path = self.get_completer_path(tokens[0])
             if completer_path:
                 return self.__find_matching_completions(completer_path, text, state)
 
@@ -127,10 +126,8 @@ class Completer():
     
     def __find_matching_completions(self, completer_path: str, text: str, state: int):
         options = self.__invoke_completer(completer_path)
-        # if options:
         matches = self.__find_matching_entries(options, text)
         Debugger.debug(f'~~~ Matches found in completer for {text}: {matches}')
-        # if len(matches) > 0:
         try:
             return f'{matches[state]} '
         except IndexError:
