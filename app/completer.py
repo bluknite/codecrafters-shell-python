@@ -53,11 +53,16 @@ class Completer():
             return self.__find_matching_command(text, state)
 
         tokens = ShellTokenizer.tokenize(prefix)
-        if len(text.strip()) == 0:
-            # completion after a space
-            completer_path = self.get_completer_path(tokens[0])
-            if completer_path:
-                return self.__find_matching_completions(completer_path, text, state)
+        Debugger.debug(f'~~~ Searching if a completer for {tokens[0]} is registered')
+        completer_path = self.get_completer_path(tokens[0])
+        if completer_path:
+            Debugger.debug(f'~~~ Found completer for {tokens[0]} at {completer_path}')
+            args = [tokens[0], text]
+            if len(tokens) > 1:
+                Debugger.debug(f'~~~   Extending args with: {tokens[-1]}')
+                args.append(tokens[-1])
+            Debugger.debug(f'~~~   Final args: {args}')
+            return self.__find_matching_completions(completer_path, args, state)
 
         return self.__find_matching_path_entries(text, state)
 
@@ -124,21 +129,24 @@ class Completer():
                 if len(matches) > 0:
                     return None
     
-    def __find_matching_completions(self, completer_path: str, text: str, state: int):
-        options = self.__invoke_completer(completer_path)
-        matches = self.__find_matching_entries(options, text)
-        Debugger.debug(f'~~~ Matches found in completer for {text}: {matches}')
+    def __find_matching_completions(self, completer_path: str, args: list[str], state: int):
+        matches = self.__invoke_completer(completer_path, args)
+        # matches = self.__find_matching_entries(options, text)
+        Debugger.debug(f'~~~ Matches found in completer for {args}: {matches}')
         try:
             return f'{matches[state]} '
         except IndexError:
             if len(matches) > 0:
                 return None
     
-    def __invoke_completer(self, path: str) -> list[str] | None:
+    def __invoke_completer(self, path: str, args: list[str]) -> list[str] | None:
         exec_path = Path(path)
+        exec_args = [str(exec_path)]
+        exec_args.extend(args)
+        Debugger.debug(f'~~~ Invoking completer: {exec_args}')
         try:
             result = subprocess.run(
-                [str(exec_path)],
+                exec_args,
                 cwd=exec_path.parent,
                 capture_output=True,
                 text=True,

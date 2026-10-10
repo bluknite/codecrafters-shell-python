@@ -19,6 +19,6 @@ class Complete(Command):
                     self.write_stdout(f'complete: {args[1]}: no completion specification\n', out_file, append=append)
                 return True
             else:
-                self.write_stderr(f'complete: argument {args[0]} must be -p\n', err_file, append=append)
+                self.write_stderr(f'complete: argument {args[0]} must be -C or -p\n', err_file, append=append)
                 return False
         return True
