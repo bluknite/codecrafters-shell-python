@@ -46,20 +46,13 @@ class Completer():
         prefix = buffer[:begidx]
         is_first_word = prefix.strip() == ""
         Debugger.debug(f'Completion invoked with text: {text} and state: {state}')
-        Debugger.debug(f'~~ Buffer: >{buffer}<')
-        Debugger.debug(f'~~ BegIdx: >{begidx}<')
-        Debugger.debug(f'~~ Prefix: >{prefix}<')
-        Debugger.debug(f'~~ IsFirstWord: {is_first_word}')
         
-        Debugger.debug(f'~~   Beginning command search...')
         if is_first_word:
             return self.__find_matching_command(text, state)
 
         tokens = ShellTokenizer.tokenize(prefix)
-        Debugger.debug(f'~~   Searching if a completer for {tokens[0]} is registered')
         completer_path = self.get_completer_path(tokens[0])
         if completer_path:
-            Debugger.debug(f'~~     Found completer for {tokens[0]} at {completer_path}')
             args = [tokens[0], text]
             args.append(tokens[-1])
             return self.__find_matching_completions(completer_path, args, state, buffer)
@@ -82,26 +75,21 @@ class Completer():
         return [e for e in entries if e.startswith(prefix)]
 
     def __find_matching_command(self, text: str, state: int):
-        Debugger.debug(f'Searching for {text}...')
         from app.built_ins.registry import built_ins, registered_commands
         COMMANDS = registered_commands()
         matches = self.__find_matching_entries(COMMANDS, text)
-        Debugger.debug(f'~~~ Matches found in built-ins for {text}: {matches}')
         try:
             return f'{matches[state]} '
         except IndexError:
             if len(matches) > 0:
                 return None
 
-        Debugger.debug(f'~~~ Searching in PATH for {text}...')
         all_matches = []
         for p in os.environ.get('PATH', '').split(os.pathsep):
-            Debugger.debug(f'~~~ Searching in PATH for {text}: {p}')
             if os.path.isdir(p):
                 with os.scandir(p) as entries:
                     files = [entry.name for entry in entries if entry.is_file()]
                     all_matches.extend(self.__find_matching_entries(files, text))
-        Debugger.debug(f'~~~ Matches found in PATH for {text}: {all_matches}')
         try:
             return f'{all_matches[state]} '
         except IndexError:
@@ -122,7 +110,6 @@ class Completer():
         with os.scandir(full_path) as entries:
             matches = [(path + entry.name, entry.is_dir()) for entry in entries if entry.name.startswith(prefix)]
             formatted_matches = [f'{m}{"/" if is_dir else " "}' for (m, is_dir) in matches]
-            Debugger.debug(f'~~~ Matches found in current directory for {text}: {formatted_matches}')
             try:
                 return f'{formatted_matches[state]}'
             except IndexError:
@@ -131,8 +118,6 @@ class Completer():
     
     def __find_matching_completions(self, completer_path: str, args: list[str], state: int, buffer: str):
         matches = self.__invoke_completer(completer_path, args, buffer)
-        # matches = self.__find_matching_entries(options, text)
-        Debugger.debug(f'~~~ Matches found in completer for {args}: {matches}')
         try:
             return f'{matches[state]} '
         except IndexError:
@@ -143,7 +128,6 @@ class Completer():
         exec_path = Path(path)
         exec_args = [str(exec_path)]
         exec_args.extend(args)
-        Debugger.debug(f'~~~ Invoking completer: {exec_args}')
         exec_env = os.environ.copy()
         exec_env['COMP_LINE'] = buffer
         exec_env['COMP_POINT'] = str(len(buffer))
