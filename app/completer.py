@@ -48,20 +48,17 @@ class Completer():
         Debugger.debug(f'~~ Prefix: >{prefix}<')
         Debugger.debug(f'~~ IsFirstWord: {is_first_word}')
         
-        Debugger.debug(f'~~~ Beginning command search...')
+        Debugger.debug(f'~~   Beginning command search...')
         if is_first_word:
             return self.__find_matching_command(text, state)
 
         tokens = ShellTokenizer.tokenize(prefix)
-        Debugger.debug(f'~~~ Searching if a completer for {tokens[0]} is registered')
+        Debugger.debug(f'~~   Searching if a completer for {tokens[0]} is registered')
         completer_path = self.get_completer_path(tokens[0])
         if completer_path:
-            Debugger.debug(f'~~~ Found completer for {tokens[0]} at {completer_path}')
+            Debugger.debug(f'~~     Found completer for {tokens[0]} at {completer_path}')
             args = [tokens[0], text]
-            if len(tokens) > 1:
-                Debugger.debug(f'~~~   Extending args with: {tokens[-1]}')
-                args.append(tokens[-1])
-            Debugger.debug(f'~~~   Final args: {args}')
+            args.append(tokens[-1])
             return self.__find_matching_completions(completer_path, args, state, buffer)
 
         return self.__find_matching_path_entries(text, state)
