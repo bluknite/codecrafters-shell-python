@@ -26,6 +26,9 @@ class Completer():
     def register_completer(self, command, path) -> None:
         self.completions[command] = path
     
+    def unregister_completer(self, command) -> None:
+        self.completions.pop(command, '')
+    
     def get_completer_path(self, command) -> str | None:
         return self.completions.get(command, None)
     

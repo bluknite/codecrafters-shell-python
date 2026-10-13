@@ -18,6 +18,8 @@ class Complete(Command):
                 else:
                     self.write_stdout(f'complete: {args[1]}: no completion specification\n', out_file, append=append)
                 return True
+            elif flag == '-r':
+                self.completer.unregister_completer(args[1])
             else:
                 self.write_stderr(f'complete: argument {args[0]} must be -C or -p\n', err_file, append=append)
                 return False
