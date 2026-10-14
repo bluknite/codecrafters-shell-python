@@ -123,7 +123,7 @@ class BackgroundPathCommand(Command):
             stderr=err_file
         )
         Debugger.debug(f'>>     (internal) process = {process.pid}')
-        jobid = Backgrounder().register_job(process.pid)
+        jobid = Backgrounder().register_job(process.pid, cmd, args)
         Debugger.debug(f'>>     (internal) jobid = {jobid}')
         self.write_stdout(f'[{jobid}] {process.pid}\n', out_file)
         Debugger.debug(f'>>     (internal) Wrote job id to output')
