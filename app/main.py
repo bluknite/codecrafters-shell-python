@@ -28,6 +28,10 @@ def execute_command(input: str) -> bool:
         return True
 
     command = args[0]
+    background = False
+    if args[-1] == '&':
+        background = True
+        args = args[:-1]
 
     # Handle redirection
     out_file = None
@@ -43,7 +47,7 @@ def execute_command(input: str) -> bool:
             append = args[-2] == '2>>'
             args = args[:-2]
     
-    cmd = find_command(command)
+    cmd = find_command(command, background)
     if cmd:
         return cmd.invoke(args[1:], out_file, err_file, append)
     print(f'{command}: command not found')

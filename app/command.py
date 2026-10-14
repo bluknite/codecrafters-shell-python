@@ -1,5 +1,7 @@
+from app.backgrounder import Backgrounder
 from abc import ABC, abstractmethod
 from app.debugger import Debugger
+import asyncio
 
 import os
 import subprocess
@@ -63,13 +65,15 @@ class Command(ABC):
         with open(file_path, mode) as file:
             file.write(content)
 
-def find_command(command: str) -> Command | None:
+def find_command(command: str, background: bool) -> Command | None:
     from app.built_ins.registry import find_builtin
     c = find_builtin(command)
     if c:
         return c
     path = find_command_path(command)
     if path:
+        if background:
+            return BackgroundPathCommand(path, command)
         return PathCommand(path, command)
     return None
 
@@ -99,3 +103,27 @@ class PathCommand(Command):
         self.write_stdout(result.stdout, out_file, append=append)
         self.write_stderr(result.stderr, err_file, append=append)
         return True
+
+class BackgroundPathCommand(Command):
+    def __init__(self, path: str, command: str):
+        self.path = path
+        self.command = command
+    
+    def invoke(self, args: list[str], out_file: str, err_file: str, append: bool) -> bool:
+        Debugger.debug(f'>> Starting background command: {self.command}, {args}')
+        asyncio.run(self.run_background(self.command, args, out_file, err_file, append))
+        Debugger.debug(f'>>   ... Background command started')
+        return True
+
+    async def run_background(self, cmd, args, out_file, err_file, append):
+        Debugger.debug(f'>>     (internal) cmd = {cmd}, args = {args}, cwd = {self.path}')
+        process = await asyncio.create_subprocess_exec(
+            cmd, *args,
+            stdout=out_file,
+            stderr=err_file
+        )
+        Debugger.debug(f'>>     (internal) process = {process.pid}')
+        jobid = Backgrounder().register_job(process.pid)
+        Debugger.debug(f'>>     (internal) jobid = {jobid}')
+        self.write_stdout(f'[{jobid}] {process.pid}\n', out_file)
+        Debugger.debug(f'>>     (internal) Wrote job id to output')
