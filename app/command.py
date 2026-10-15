@@ -82,14 +82,14 @@ class Command(ABC):
         with open(file_path, mode) as file:
             file.write(content)
 
-def parse_command(input: str) -> tuple[Command | None, str]:
+def parse_command(input: str) -> tuple[Command | None, str | None]:
     Debugger.debug(f'\nReceived input: {input}')
     if input == "":
-        return True
+        return (None, None)
     args = ShellTokenizer.tokenize(input)
     if not args:
         print(f'Failed to parse input! {input}')
-        return True
+        return (None, None)
 
     command = args[0]
 
@@ -115,10 +115,6 @@ def parse_command(input: str) -> tuple[Command | None, str]:
     
     cmd = find_command(command, background, args[1:], out_file, err_file, append)
     return (cmd, command)
-    # if cmd:
-    #     return cmd.invoke()
-    # print(f'{command}: command not found')
-    # return True
 
 def find_command(command: str, background: bool, args: list[str], out_file: str, err_file:str, append: bool) -> Command | None:
     from app.built_ins.registry import find_builtin

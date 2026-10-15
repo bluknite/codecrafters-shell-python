@@ -23,7 +23,8 @@ def execute_command(input: str) -> bool:
     (cmd, command) = parse_command(input)
     if cmd:
         return cmd.invoke()
-    print(f'{command}: command not found')
+    if command:
+        print(f'{command}: command not found')
     return True
 
 if __name__ == "__main__":
