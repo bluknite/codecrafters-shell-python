@@ -2,6 +2,8 @@ from dataclasses import dataclass
 
 from app.managed_process import ManagedProcess
 
+import sys
+
 class Backgrounder():
     _instance = None
 
@@ -44,15 +46,17 @@ class Backgrounder():
         job_strs.append(self.get_second_most_recent_job())
         job_strs.append(self.get_most_recent_job())
         result = [s for s in job_strs if s]
-        self.refresh_jobs()
+        self.refresh_jobs(print_done=False)
         if len(result) == 0:
             return None
         return result
     
-    def refresh_jobs(self):
-        self.processes = [
-            job for job in self.processes if job.is_running()
-        ]
+    def refresh_jobs(self, print_done: bool):
+        done_jobs = [job for job in self.processes if not job.is_running()]
+        self.processes = [job for job in self.processes if job.is_running()]
+        if print_done:
+            for job in done_jobs:
+                sys.stdout.write(f'[{job.jobid}]+  Done                    {job.cmd}\n')
 
 
 @dataclass

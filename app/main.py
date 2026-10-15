@@ -1,3 +1,4 @@
+from app.backgrounder import Backgrounder
 from app.command import find_command
 from app.completer import Completer
 from app.debugger import Debugger
@@ -14,6 +15,7 @@ def main():
         pass
 
 def repl():
+    Backgrounder().refresh_jobs(print_done=True)
     sys.stdout.write('$ ')
     command = input()
     return execute_command(command)
