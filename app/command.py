@@ -1,8 +1,6 @@
-# from app.backgrounder import ManagedProcess
-from app.managed_process import ManagedProcess
-from app.backgrounder import Backgrounder
 from abc import ABC, abstractmethod
-from app.debugger import Debugger
+from app.backgrounder import Backgrounder
+from app.managed_process import ManagedProcess
 
 import os
 import subprocess
@@ -103,8 +101,6 @@ class PathCommand(Command):
     
     def invoke(self, args: list[str], out_file: str, err_file: str, append: bool) -> bool:
         full_args = [self.command] + args
-        Debugger.debug(f'Full args: {full_args}')
-        Debugger.debug(f'CWD: {self.path}')
         result = subprocess.run(
             full_args,
             cwd=self.path,
@@ -121,17 +117,11 @@ class BackgroundPathCommand(Command):
         self.command = command
     
     def invoke(self, args: list[str], out_file: str, err_file: str, append: bool) -> bool:
-        Debugger.debug(f'>> Starting background command: {self.command}, {args}')
         self.run_background(self.command, args, out_file, err_file, append)
-        Debugger.debug(f'>>   ... Background command started')
         return True
 
     def run_background(self, cmd, args, out_file, err_file, append):
-        Debugger.debug(f'>>     (internal) cmd = {cmd}, args = {args}, cwd = {self.path}')
         process = ManagedProcess(cmd, args)
         process.start(self.write_stdout_func(out_file, append), self.write_stderr_func(err_file, append))
-        Debugger.debug(f'>>     (internal) process = {process.get_pid()}')
         jobid = Backgrounder().register_job(process.get_pid(), cmd, args, process)
-        Debugger.debug(f'>>     (internal) jobid = {jobid}')
         self.write_stdout(f'[{jobid}] {process.get_pid()}\n', out_file)
-        Debugger.debug(f'>>     (internal) Wrote job id to output')

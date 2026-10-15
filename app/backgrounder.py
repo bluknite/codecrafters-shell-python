@@ -1,6 +1,5 @@
-from dataclasses import dataclass
-
 from app.managed_process import ManagedProcess
+from dataclasses import dataclass
 
 import sys
 
