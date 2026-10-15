@@ -1,8 +1,7 @@
 from app.backgrounder import Backgrounder
-from app.command import find_command
+from app.command import parse_command
 from app.completer import Completer
 from app.debugger import Debugger
-from app.shell_tokenizer import ShellTokenizer
 
 import sys
 
@@ -21,37 +20,9 @@ def repl():
     return execute_command(command)
 
 def execute_command(input: str) -> bool:
-    Debugger.debug(f'\nReceived input: {input}')
-    if input == "":
-        return True
-    args = ShellTokenizer.tokenize(input)
-    if not args:
-        print(f'Failed to parse input! {input}')
-        return True
-
-    command = args[0]
-    background = False
-    if args[-1] == '&':
-        background = True
-        args = args[:-1]
-
-    # Handle redirection
-    out_file = None
-    err_file = None
-    append = False
-    if len(args) >= 3:
-        if args[-2] == '>' or args[-2] == '1>' or args[-2] == '>>' or args[-2] == '1>>':
-            out_file = args[-1]
-            append = args[-2] == '>>' or args[-2] == '1>>'
-            args = args[:-2]
-        elif args[-2] == '2>' or args[-2] == '2>>':
-            err_file = args[-1]
-            append = args[-2] == '2>>'
-            args = args[:-2]
-    
-    cmd = find_command(command, background)
+    (cmd, command) = parse_command(input)
     if cmd:
-        return cmd.invoke(args[1:], out_file, err_file, append)
+        return cmd.invoke()
     print(f'{command}: command not found')
     return True
 

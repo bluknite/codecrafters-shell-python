@@ -3,20 +3,23 @@ from app.command import Command
 import os
 
 class Cd(Command):
-    def invoke(self, args: list[str], out_file: str, err_file: str, append: bool) -> bool:
+    def __init__(self, args: list[str], out_file: str, err_file:str, append: bool):
+        super().__init__(args, out_file, err_file, append)
+
+    def invoke(self) -> bool:
         output = ""
         err = False
-        if len(args) != 1:
-            output = f'cd: expected 1 argument but found {len(args)}\n'
+        if len(self.args) != 1:
+            output = f'cd: expected 1 argument but found {len(self.args)}\n'
             err = True
-        if args[0] == '~':
+        if self.args[0] == '~':
             os.chdir(os.environ.get('HOME'))
-        elif os.path.isdir(args[0]):
-            os.chdir(args[0])
+        elif os.path.isdir(self.args[0]):
+            os.chdir(self.args[0])
         else:
-            output = f'cd: {args[0]}: No such file or directory\n'
+            output = f'cd: {self.args[0]}: No such file or directory\n'
         if not err:
-            self.write_stdout(output, out_file, append=append)
+            self.write_stdout(output, self.out_file, append=self.append)
         else:
-            self.write_stderr(output, err_file, append=append)
+            self.write_stderr(output, self.err_file, append=self.append)
         return not err

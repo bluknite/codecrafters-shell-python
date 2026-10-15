@@ -2,8 +2,11 @@ from app.command import Command
 from app.command import find_command_path
 
 class Type(Command):
-    def invoke(self, args: list[str], out_file: str, err_file: str, append: bool) -> bool:
-        commmand = args[0]
+    def __init__(self, args: list[str], out_file: str, err_file:str, append: bool):
+        super().__init__(args, out_file, err_file, append)
+
+    def invoke(self) -> bool:
+        commmand = self.args[0]
         output = ""
         from app.built_ins.registry import registered_commands
         if commmand in registered_commands():
@@ -14,5 +17,5 @@ class Type(Command):
                 output = f'{commmand} is {path}/{commmand}\n'
             else:
                 output = f'{commmand}: not found\n'
-        self.write_stdout(output, out_file, append=append)
+        self.write_stdout(output, self.out_file, append=self.append)
         return True

@@ -10,15 +10,15 @@ from app.command import Command
 def registered_commands() -> list[str]:
     return list(built_ins.keys())
 
-def find_builtin(command) -> Command | None:
+def find_builtin(command) -> type[Command] | None:
     return built_ins.get(command)
 
 built_ins = {
-    'cd': Cd(),
-    'complete': Complete(),
-    'echo': Echo(),
-    'exit': Exit(),
-    'jobs': Jobs(),
-    'pwd': Pwd(),
-    'type': Type()
+    'cd': Cd,
+    'complete': Complete,
+    'echo': Echo,
+    'exit': Exit,
+    'jobs': Jobs,
+    'pwd': Pwd,
+    'type': Type
 }

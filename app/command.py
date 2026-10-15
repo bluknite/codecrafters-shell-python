@@ -1,14 +1,22 @@
 from abc import ABC, abstractmethod
 from app.backgrounder import Backgrounder
+from app.debugger import Debugger
 from app.managed_process import ManagedProcess
+from app.shell_tokenizer import ShellTokenizer
 
 import os
 import subprocess
 import sys
 
 class Command(ABC):
+    def __init__(self, args: list[str], out_file: str, err_file:str, append: bool):
+        self.args = args
+        self.out_file = out_file
+        self.err_file = err_file
+        self.append = append
+
     @abstractmethod
-    def invoke(self, args: list[str], out_file: str, err_file: str, append: bool) -> bool:
+    def invoke(self) -> bool:
         """
         Invokes the command with the given arguments.
 
@@ -74,16 +82,54 @@ class Command(ABC):
         with open(file_path, mode) as file:
             file.write(content)
 
-def find_command(command: str, background: bool) -> Command | None:
+def parse_command(input: str) -> tuple[Command | None, str]:
+    Debugger.debug(f'\nReceived input: {input}')
+    if input == "":
+        return True
+    args = ShellTokenizer.tokenize(input)
+    if not args:
+        print(f'Failed to parse input! {input}')
+        return True
+
+    command = args[0]
+
+    # Check for background process
+    background = False
+    if args[-1] == '&':
+        background = True
+        args = args[:-1]
+
+    # Handle redirection
+    out_file = None
+    err_file = None
+    append = False
+    if len(args) >= 3:
+        if args[-2] == '>' or args[-2] == '1>' or args[-2] == '>>' or args[-2] == '1>>':
+            out_file = args[-1]
+            append = args[-2] == '>>' or args[-2] == '1>>'
+            args = args[:-2]
+        elif args[-2] == '2>' or args[-2] == '2>>':
+            err_file = args[-1]
+            append = args[-2] == '2>>'
+            args = args[:-2]
+    
+    cmd = find_command(command, background, args[1:], out_file, err_file, append)
+    return (cmd, command)
+    # if cmd:
+    #     return cmd.invoke()
+    # print(f'{command}: command not found')
+    # return True
+
+def find_command(command: str, background: bool, args: list[str], out_file: str, err_file:str, append: bool) -> Command | None:
     from app.built_ins.registry import find_builtin
     c = find_builtin(command)
     if c:
-        return c
+        return c(args, out_file, err_file, append=append)
     path = find_command_path(command)
     if path:
         if background:
-            return BackgroundPathCommand(path, command)
-        return PathCommand(path, command)
+            return BackgroundPathCommand(path, command, args, out_file, err_file, append)
+        return PathCommand(path, command, args, out_file, err_file, append)
     return None
 
 def find_command_path(command: str) -> str | None:
@@ -95,33 +141,32 @@ def find_command_path(command: str) -> str | None:
     return None
 
 class PathCommand(Command):
-    def __init__(self, path: str, command: str):
+    def __init__(self, path: str, command: str, args: list[str], out_file: str, err_file:str, append: bool):
+        super().__init__(args, out_file, err_file, append)
         self.path = path
         self.command = command
     
-    def invoke(self, args: list[str], out_file: str, err_file: str, append: bool) -> bool:
-        full_args = [self.command] + args
+    def invoke(self) -> bool:
+        full_args = [self.command] + self.args
         result = subprocess.run(
             full_args,
             cwd=self.path,
             capture_output=True,
             text=True
         )
-        self.write_stdout(result.stdout, out_file, append=append)
-        self.write_stderr(result.stderr, err_file, append=append)
+        self.write_stdout(result.stdout, self.out_file, append=self.append)
+        self.write_stderr(result.stderr, self.err_file, append=self.append)
         return True
 
 class BackgroundPathCommand(Command):
-    def __init__(self, path: str, command: str):
+    def __init__(self, path: str, command: str, args: list[str], out_file: str, err_file:str, append: bool):
+        super().__init__(args, out_file, err_file, append)
         self.path = path
         self.command = command
     
-    def invoke(self, args: list[str], out_file: str, err_file: str, append: bool) -> bool:
-        self.run_background(self.command, args, out_file, err_file, append)
+    def invoke(self) -> bool:
+        process = ManagedProcess(self.command, self.args)
+        process.start(self.write_stdout_func(self.out_file, self.append), self.write_stderr_func(self.err_file, self.append))
+        jobid = Backgrounder().register_job(process.get_pid(), self.command, self.args, process)
+        self.write_stdout(f'[{jobid}] {process.get_pid()}\n', self.out_file, append=self.append)
         return True
-
-    def run_background(self, cmd, args, out_file, err_file, append):
-        process = ManagedProcess(cmd, args)
-        process.start(self.write_stdout_func(out_file, append), self.write_stderr_func(err_file, append))
-        jobid = Backgrounder().register_job(process.get_pid(), cmd, args, process)
-        self.write_stdout(f'[{jobid}] {process.get_pid()}\n', out_file)
