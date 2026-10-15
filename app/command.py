@@ -1,7 +1,8 @@
+# from app.backgrounder import ManagedProcess
+from app.managed_process import ManagedProcess
 from app.backgrounder import Backgrounder
 from abc import ABC, abstractmethod
 from app.debugger import Debugger
-import asyncio
 
 import os
 import subprocess
@@ -33,10 +34,7 @@ class Command(ABC):
             file: File to write to
             append: Whether to append to the file
         """
-        if file:
-            self.write_to_file(content, file, append=append)
-        else:
-            sys.stdout.write(content)
+        self.write_stdout_func(file, append)(content)
 
     def write_stderr(self, content: str, file: str, append = False):
         """
@@ -47,10 +45,23 @@ class Command(ABC):
             file: File to write to
             append: Whether to append to the file
         """
-        if file:
-            self.write_to_file(content, file, append=append)
-        else:
-            sys.stderr.write(content)
+        self.write_stderr_func(file, append)(content)
+    
+    def write_stdout_func(self, file: str, append: bool) -> callable:
+        def func(content: str):
+            if file:
+                self.write_to_file(content, file, append=append)
+            else:
+                sys.stdout.write(content)
+        return func
+    
+    def write_stderr_func(self, file: str, append: bool) -> callable:
+        def func(content: str):
+            if file:
+                self.write_to_file(content, file, append=append)
+            else:
+                sys.stderr.write(content)
+        return func
 
     def write_to_file(self, content: str, file_path: str, append=False):
         """
@@ -111,19 +122,16 @@ class BackgroundPathCommand(Command):
     
     def invoke(self, args: list[str], out_file: str, err_file: str, append: bool) -> bool:
         Debugger.debug(f'>> Starting background command: {self.command}, {args}')
-        asyncio.run(self.run_background(self.command, args, out_file, err_file, append))
+        self.run_background(self.command, args, out_file, err_file, append)
         Debugger.debug(f'>>   ... Background command started')
         return True
 
-    async def run_background(self, cmd, args, out_file, err_file, append):
+    def run_background(self, cmd, args, out_file, err_file, append):
         Debugger.debug(f'>>     (internal) cmd = {cmd}, args = {args}, cwd = {self.path}')
-        process = await asyncio.create_subprocess_exec(
-            cmd, *args,
-            stdout=out_file,
-            stderr=err_file
-        )
-        Debugger.debug(f'>>     (internal) process = {process.pid}')
-        jobid = Backgrounder().register_job(process.pid, cmd, args)
+        process = ManagedProcess(cmd, args)
+        process.start(self.write_stdout_func(out_file, append), self.write_stderr_func(err_file, append))
+        Debugger.debug(f'>>     (internal) process = {process.get_pid()}')
+        jobid = Backgrounder().register_job(process.get_pid(), cmd, args, process)
         Debugger.debug(f'>>     (internal) jobid = {jobid}')
-        self.write_stdout(f'[{jobid}] {process.pid}\n', out_file)
+        self.write_stdout(f'[{jobid}] {process.get_pid()}\n', out_file)
         Debugger.debug(f'>>     (internal) Wrote job id to output')
