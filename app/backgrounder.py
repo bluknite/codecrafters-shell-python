@@ -15,14 +15,13 @@ class Backgrounder():
     def __init__(self):
         if not hasattr(self, 'initialized'):
             self.initialized = True
-            self.nextid = 1
             self.processes = []
     
     def register_job(self, pid, cmd, args, process) -> int:
         full_cmd = cmd + ' ' + ' '.join(args)
-        self.processes.append(Job(self.nextid, pid, full_cmd, process))
-        self.nextid += 1
-        return self.nextid - 1
+        jobid = 1 if len(self.processes) == 0 else max([job.jobid for job in self.processes]) + 1
+        self.processes.append(Job(jobid, pid, full_cmd, process))
+        return jobid
 
     def get_most_recent_job(self) -> str | None:
         if len(self.processes) == 0:
